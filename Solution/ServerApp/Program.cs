@@ -5,7 +5,6 @@ namespace ServerApp
 {
     class Program
     {
-        // private static readonly string connectionString = "Data Source=localhost;Initial Catalog=MyDatabase;Integrated Security=True";
         private static readonly string connectionString = "Server=localhost\\SQLEXPRESS;Initial Catalog=MyDatabase;Integrated Security=True";
         static void Main(string[] args)
         {

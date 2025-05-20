@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using ServerApp.Models;
+using BCrypt.Net;
 
 namespace ServerApp.Controllers
 {
@@ -20,13 +21,15 @@ namespace ServerApp.Controllers
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
+                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(user.Password);
+
                 string query = "INSERT INTO Users (Name, Email, Password) VALUES (@Name, @Email, @Password); SELECT SCOPE_IDENTITY();";
                 SqlCommand command = new SqlCommand(query, connection);
-                
+
                 command.Parameters.AddWithValue("@Name", user.Name);
                 command.Parameters.AddWithValue("@Email", user.Email);
-                command.Parameters.AddWithValue("@Password", user.Password);
-                
+                command.Parameters.AddWithValue("@Password", hashedPassword);
+
                 connection.Open();
                 var result = command.ExecuteScalar();
                 return Convert.ToInt32(result);
@@ -40,12 +43,12 @@ namespace ServerApp.Controllers
             {
                 string query = "SELECT ID, Name, Email, Password FROM Users WHERE ID = @ID";
                 SqlCommand command = new SqlCommand(query, connection);
-                
+
                 command.Parameters.AddWithValue("@ID", id);
-                
+
                 connection.Open();
                 SqlDataReader reader = command.ExecuteReader();
-                
+
                 if (reader.Read())
                 {
                     User user = new User
@@ -57,7 +60,7 @@ namespace ServerApp.Controllers
                     };
                     return user;
                 }
-                
+
                 return null;
             }
         }
@@ -66,15 +69,15 @@ namespace ServerApp.Controllers
         public List<User> GetAllUsers()
         {
             List<User> users = new List<User>();
-            
+
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
                 string query = "SELECT ID, Name, Email, Password FROM Users";
                 SqlCommand command = new SqlCommand(query, connection);
-                
+
                 connection.Open();
                 SqlDataReader reader = command.ExecuteReader();
-                
+
                 while (reader.Read())
                 {
                     User user = new User
@@ -87,7 +90,7 @@ namespace ServerApp.Controllers
                     users.Add(user);
                 }
             }
-            
+
             return users;
         }
 
@@ -96,17 +99,27 @@ namespace ServerApp.Controllers
         {
             using (SqlConnection connection = new SqlConnection(connectionString))
             {
+                // Check if password needs to be updated
+                User existingUser = GetUserById(user.ID);
+                string passwordToSave = user.Password;
+
+                // If the password has changed, hash the new one
+                if (existingUser != null && user.Password != existingUser.Password)
+                {
+                    passwordToSave = BCrypt.Net.BCrypt.HashPassword(user.Password);
+                }
+
                 string query = "UPDATE Users SET Name = @Name, Email = @Email, Password = @Password WHERE ID = @ID";
                 SqlCommand command = new SqlCommand(query, connection);
-                
+
                 command.Parameters.AddWithValue("@ID", user.ID);
                 command.Parameters.AddWithValue("@Name", user.Name);
                 command.Parameters.AddWithValue("@Email", user.Email);
                 command.Parameters.AddWithValue("@Password", user.Password);
-                
+
                 connection.Open();
                 int rowsAffected = command.ExecuteNonQuery();
-                
+
                 return rowsAffected > 0;
             }
         }
@@ -118,12 +131,12 @@ namespace ServerApp.Controllers
             {
                 string query = "DELETE FROM Users WHERE ID = @ID";
                 SqlCommand command = new SqlCommand(query, connection);
-                
+
                 command.Parameters.AddWithValue("@ID", id);
-                
+
                 connection.Open();
                 int rowsAffected = command.ExecuteNonQuery();
-                
+
                 return rowsAffected > 0;
             }
         }
